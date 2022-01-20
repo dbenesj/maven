@@ -831,6 +831,9 @@ public class DefaultModelBuilder
 
         if ( parent != null )
         {
+            //interpolate also parent with variables
+            parent = interpolateParent( parent, childModel, request, problems );
+            
             String groupId = parent.getGroupId();
             String artifactId = parent.getArtifactId();
             String version = parent.getVersion();
@@ -887,6 +890,63 @@ public class DefaultModelBuilder
         }
 
         return parentData;
+    }
+
+    private Parent interpolateParent( Parent parent, Model childModel, ModelBuildingRequest request, DefaultModelProblemCollector problems ) {
+        StringSearchInterpolator ssi = new StringSearchInterpolator();
+        ssi.addValueSource( new MapBasedValueSource( request.getUserProperties() ) );
+        ssi.addValueSource( new MapBasedValueSource( childModel.getProperties() ) );
+        ssi.addValueSource( new MapBasedValueSource( request.getSystemProperties() ) );
+
+        //groupId
+        try
+        {
+            String interpolated = ssi.interpolate( parent.getGroupId() );
+            parent.setGroupId( interpolated );
+        }
+        catch ( Exception e )
+        {
+            ModelProblemCollectorRequest mpcr =
+                new ModelProblemCollectorRequest( Severity.ERROR,
+                                                  Version.BASE ).setMessage( "Failed to interpolate parent groupId: "
+                                                      + parent.getGroupId()
+                                                      + " on class: " ).setException( e );
+            problems.add( mpcr );
+        }
+
+        //parentId
+        try
+        {
+            String interpolated = ssi.interpolate( parent.getArtifactId() );
+            parent.setArtifactId( interpolated );
+        }
+        catch ( Exception e )
+        {
+            ModelProblemCollectorRequest mpcr =
+                new ModelProblemCollectorRequest( Severity.ERROR,
+                                                  Version.BASE ).setMessage( "Failed to interpolate parent artifactId: "
+                                                      + parent.getArtifactId()
+                                                      + " on class: " ).setException( e );
+            problems.add( mpcr );
+        }
+
+        //versionId
+        try
+        {
+            String interpolated = ssi.interpolate( parent.getVersion() );
+            parent.setVersion( interpolated );
+        }
+        catch ( Exception e )
+        {
+            ModelProblemCollectorRequest mpcr =
+                new ModelProblemCollectorRequest( Severity.ERROR,
+                                                  Version.BASE ).setMessage( "Failed to interpolate parent version: "
+                                                      + parent.getArtifactId()
+                                                      + " on class: " ).setException( e );
+            problems.add( mpcr );
+        }
+
+        return parent;
     }
 
     private ModelData readParentLocally( Model childModel, ModelSource childSource, ModelBuildingRequest request,
